@@ -5,6 +5,8 @@
 .DS_Store
 /uploads
 /key_x25519
+/bot_key
+/uwsgi-sogs-proxied.ini
 __pycache__
 *.pyc
 /protobuf.*/

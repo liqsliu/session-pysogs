@@ -304,6 +304,7 @@ class Room:
         *,
         after: int = None,
         before: int = None,
+        single: int = None,
         recent: bool = False,
         limit: int = 256,
     ):
@@ -324,7 +325,7 @@ class Room:
         mod = self.check_moderator(user)
         msgs = []
 
-        opt_count = sum((after is not None, before is not None, recent))
+        opt_count = sum((single is not None, after is not None, before is not None, recent))
         if opt_count == 0:
             raise RuntimeError("Exactly one of before=, after=, or recent= is required")
         if opt_count > 1:
@@ -341,7 +342,7 @@ class Room:
             f"""
             SELECT * FROM message_details
             WHERE room = ? AND data IS NOT NULL AND NOT filtered
-                {'AND id > ?' if after else 'AND id < ?' if before else ''}
+                {'AND id = ?' if single else 'AND id > ?' if after else 'AND id < ?' if before else ''}
                 AND (
                     whisper IS NULL
                     {'OR whisper = ?' if user else ''}
@@ -351,7 +352,7 @@ class Room:
             """,
             (
                 self.id,
-                *(() if recent else (after,) if after is not None else (before,)),
+                *(() if recent else (single,) if single is not None else (after,) if after is not None else (before,)),
                 *((user.id,) if user else ()),
                 limit,
             ),

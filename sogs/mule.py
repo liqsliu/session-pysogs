@@ -15,12 +15,123 @@ from . import omq as o
 # - it handles cleanup jobs (e.g. periodic deletions)
 
 
+
+
+
+    ##############################
+from sogs import utils
+from sogs import model
+
+#from nacl.public import PrivateKey
+class TestUser(model.User):
+    def __init__(self, key):
+#        self.privkey = PrivateKey.generate()
+        self.privkey = key
+
+        super().__init__(session_id="05" + self.privkey.public_key.encode().hex(), touch=True)
+
+
+from typing import Union
+
+
+def pad32(data: Union[bytes, str]):
+    """Returns the bytes (or str.encode()) padded to length 32 by appending null bytes"""
+    if isinstance(data, str):
+        data = data.encode()
+    assert len(data) <= 32
+    if len(data) < 32:
+        return data + b'\0' * (32 - len(data))
+    return data
+
+
+import sogs.session_pb2
+def parse_message(data: bytes):
+    msg = sogs.session_pb2.Content()
+    try:
+      msg.ParseFromString(utils.remove_session_message_padding(data))
+    except:
+        pass
+        return
+    return msg.dataMessage
+
+sid = "053ecfa4c331566e2af8b71a25a0983613860bedcc833cf9099f36725926de2237"
+bot = model.User(session_id=sid)
+rooms = model.get_rooms()
+if rooms:
+    for room in rooms:
+        pass
+       # print_room(room)
+else:
+    print("No rooms.")
+    room=None
+
+sent=0
+#def test_posting(client, room, user, user2, mod, global_mod):
+def my_test():
+    global sent
+    if sent == 0:
+        sent = 1
+    else:
+      return
+
+
+    import sogs.crypto
+    user = TestUser(sogs.crypto.bot_key)
+#    msgs = root
+    msgs = room.get_messages_for(user, recent=True, limit=64)
+    for msg in msgs:
+#      print(msg)
+#      print(utils.message_body(msg["data"]))
+#      print(utils.remove_session_message_padding(msg["data"]))
+        print(message(msg["data"]))
+#      print(msg["data"].decode())
+#    msgs = utils.jsonify_with_base64(msgs)
+#    msgs = utils.json_with_base64(msgs)
+#    print(msgs)
+
+
+
+    msg = "test"
+    #user = TestUser()
+    bot = user
+    print(bot)
+    from json import dumps
+#    r = sogs_post(client, url_post, {"data": d, "signature": s}, user)
+    d, s = (utils.encode_base64(x) for x in (b"post 1", pad32("sig 1")))
+    data={"data": d, "signature": s}
+    print(data)
+    data = dumps(data).encode()
+    from .auth import x_sogs_for
+    url = "/room/test/message"
+    url = "/room/wtfipfs/message"
+    headers=x_sogs_for(user, "POST", url, data)
+    print(headers)
+    req = headers
+
+    msg = room.add_post(
+#      data=utils.decode_base64(req.get('data')),
+  #    whisper_to=req.get('whisper_to'),
+  #    whisper_mods=bool(req.get('whisper_mods')),
+#      sig=utils.decode_base64(req.get('signature')),
+      data=utils.decode_base64(d),
+      sig=utils.decode_base64(s),
+#      data=data,
+#      sig=req["X-SOGS-Hash"],
+      user=user)
+    from sogs import web
+    with web.app.test_client() as client:
+        pass
+#        client.post( url, data=data, content_type='application/json', headers=x_sogs_for(user, "POST", url, data))
+
+
+
 def run():
     try:
         app.logger.info("OxenMQ mule started.")
 
         while True:
             time.sleep(1)
+#            my_test()
 
     except Exception:
         app.logger.error("mule died via exception:\n{}".format(traceback.format_exc()))
@@ -86,15 +197,41 @@ def log_exceptions(f):
     return wrapper
 
 
+
+from .mt import mt_send
+
+
 @log_exceptions
 def message_posted(m: oxenmq.Message):
     id = bt_deserialize(m.data()[0])
+    print("55555")
+    print(m)
+    print(len(m.data()))
+    print("----")
+    for i in m.data():
+        print(bt_deserialize(i))
+        print("----")
+    print(list(m.data()))
+    print(dir(m))
+    msgs = room.get_messages_for(bot, single=int(id), limit=1)
+    print("----")
+    for msg in msgs:
+#      print(msg)
+#      print(utils.message_body(msg["data"]))
+#      print(utils.remove_session_message_padding(msg["data"]))
+        msg=parse_message(msg["data"])
+        print(msg)
+#        mt_send(text=msg["body"], username="S "+msg["profile"]["displayName"])
+        mt_send(text=msg.body, username="S "+msg.profile.displayName)
+        print("----")
     app.logger.warning(f"FIXME: mule -- message posted stub, id={id}")
 
 
 @log_exceptions
 def messages_deleted(m: oxenmq.Message):
     ids = bt_deserialize(m.data()[0])
+    print("55555")
+    print(m)
     app.logger.warning(f"FIXME: mule -- message delete stub, deleted messages: {ids}")
 
 

@@ -92,6 +92,108 @@ ap.add_argument(
 args = ap.parse_args()
 
 
+
+
+
+
+
+    ##############################
+from sogs import utils
+
+from sogs import session_pb2 as protobuf
+from nacl.public import PrivateKey
+class TestUser(model.User):
+    def __init__(self):
+        self.privkey = PrivateKey.generate()
+
+        super().__init__(session_id="05" + self.privkey.public_key.encode().hex(), touch=True)
+
+
+from typing import Union
+
+
+def pad32(data: Union[bytes, str]):
+    """Returns the bytes (or str.encode()) padded to length 32 by appending null bytes"""
+    if isinstance(data, str):
+        data = data.encode()
+    assert len(data) <= 32
+    if len(data) < 32:
+        return data + b'\0' * (32 - len(data))
+    return data
+
+#def test_posting(client, room, user, user2, mod, global_mod):
+def my_test():
+
+    def message(data: bytes):
+        msg = protobuf.Content()
+        msg.ParseFromString(utils.remove_session_message_padding(data))
+        return msg.dataMessage
+    rooms = model.get_rooms()
+    if rooms:
+        for room in rooms:
+            print_room(room)
+    else:
+        print("No rooms.")
+        return
+
+    sid = "053ecfa4c331566e2af8b71a25a0983613860bedcc833cf9099f36725926de2237"
+    user = model.User(session_id=sid)
+#    msgs = root
+    msgs = room.get_messages_for(user, recent=True, limit=64)
+    for msg in msgs:
+#      print(msg)
+#      print(utils.message_body(msg["data"]))
+#      print(utils.remove_session_message_padding(msg["data"]))
+        print(message(msg["data"]))
+#      print(msg["data"].decode())
+#    msgs = utils.jsonify_with_base64(msgs)
+#    msgs = utils.json_with_base64(msgs)
+#    print(msgs)
+
+
+
+    msg = "test"
+    d, s = (utils.encode_base64(x) for x in (b"post 1", pad32("sig 1")))
+    user = TestUser()
+    from json import dumps
+#    r = sogs_post(client, url_post, {"data": d, "signature": s}, user)
+    data={"data": d, "signature": s}
+    data = dumps(data).encode()
+    from .auth import x_sogs_for
+    url = "/room/test/message"
+    url = "/room/wtfipfs/message"
+    headers=x_sogs_for(user, "POST", url, data)
+    print(headers)
+    req = headers
+
+    msg = room.add_post(
+      user=user,
+  #    data=utils.decode_base64(req.get('data')),
+  #    whisper_to=req.get('whisper_to'),
+  #    whisper_mods=bool(req.get('whisper_mods')),
+  #    sig=utils.decode_base64(req.get('signature'))
+      data=data,
+      sig=req["X-SOGS-Hash"])
+    from sogs import web
+    with web.app.test_client() as client:
+        pass
+#        client.post( url, data=data, content_type='application/json', headers=x_sogs_for(user, "POST", url, data))
+
+
+
+
+    return
+    
+
+
+
+
+
+
+
+    ##############################
+
+
 def print_room(room: model.Room):
     msgs, msgs_size = room.messages_size()
     files, files_size = room.attachments_size()
@@ -287,4 +389,9 @@ elif args.list_global_mods:
 else:
     print("Error: no action given", file=sys.stderr)
     ap.print_usage()
+
+
+
+#    my_test()
+
     sys.exit(1)
