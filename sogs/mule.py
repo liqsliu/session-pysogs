@@ -54,8 +54,17 @@ def parse_message(data: bytes):
         return
     return msg.dataMessage
 
-sid = "053ecfa4c331566e2af8b71a25a0983613860bedcc833cf9099f36725926de2237"
-bot = model.User(session_id=sid)
+myid = "053ecfa4c331566e2af8b71a25a0983613860bedcc833cf9099f36725926de2237"
+me = model.User(session_id=myid)
+sid = "055955da2564006e943f49c18d8f8e8c0ef177450234b573dbf6748eb7dbb87c72"
+server = model.User(session_id=sid)
+import sogs.crypto
+bot = TestUser(sogs.crypto.bot_key)
+bot = TestUser(sogs.crypto.server_key)
+
+user = server
+user = bot
+
 rooms = model.get_rooms()
 if rooms:
     for room in rooms:
@@ -64,6 +73,26 @@ if rooms:
 else:
     print("No rooms.")
     room=None
+
+
+
+
+def get_headers(data):
+    from json import dumps
+#    r = sogs_post(client, url_post, {"data": d, "signature": s}, user)
+#    d, s = (utils.encode_base64(x) for x in (b"post 1", pad32("sig 1")))
+#    data={"data": d, "signature": s}
+    print(data)
+    try:
+        data = dumps(data).encode()
+    except:
+        pass
+    from .auth import x_sogs_for
+    url = "/room/wtfipfs/message"
+
+    headers=x_sogs_for(user, "POST", url, data)
+    print(headers)
+    return data, headers
 
 sent=0
 #def test_posting(client, room, user, user2, mod, global_mod):
@@ -74,54 +103,81 @@ def my_test():
     else:
       return
 
-
-    import sogs.crypto
-    user = TestUser(sogs.crypto.bot_key)
 #    msgs = root
-    msgs = room.get_messages_for(user, recent=True, limit=64)
+#    msgs = room.get_messages_for(user, recent=True, limit=4)
+#    msgs = room.get_messages_for(user, single=63, limit=1)
+    msgs = room.get_messages_for(user, single=67, limit=1)
     for msg in msgs:
 #      print(msg)
 #      print(utils.message_body(msg["data"]))
 #      print(utils.remove_session_message_padding(msg["data"]))
-        print(message(msg["data"]))
 #      print(msg["data"].decode())
 #    msgs = utils.jsonify_with_base64(msgs)
 #    msgs = utils.json_with_base64(msgs)
-#    print(msgs)
+#        print(parse_message(msg["data"]))
+        print(msg)
+        print(msg["data"])
+        print(len(msg["data"]))
+        print(len(msg['signature']))
+        msg=parse_message(msg["data"])
+        print(msg.ByteSize())
+        print(msg)
 
 
-
-    msg = "test"
-    #user = TestUser()
-    bot = user
-    print(bot)
-    from json import dumps
-#    r = sogs_post(client, url_post, {"data": d, "signature": s}, user)
+#    time.sleep(5)
+#    msg = "test"
     d, s = (utils.encode_base64(x) for x in (b"post 1", pad32("sig 1")))
-    data={"data": d, "signature": s}
-    print(data)
-    data = dumps(data).encode()
-    from .auth import x_sogs_for
-    url = "/room/test/message"
-    url = "/room/wtfipfs/message"
-    headers=x_sogs_for(user, "POST", url, data)
-    print(headers)
-    req = headers
+    #user = TestUser()
+    data={
+        "body": "test",
+        "expireTimer": 0,
+        "profile": {
+          "displayName": "bot"
+          }
+        }
+
+
+#    msg = sogs.session_pb2.Content().CopyFrom(msg)
+    tmp = str(msg).encode()
+    print(tmp)
+#    tmp = msg.SerializePartialToString()
+    tmp = msg.SerializeToString()
+    tmp = b"\n"+chr(msg.ByteSize()).encode()+tmp
+    print(repr(tmp))
+#    msg = sogs.session_pb2.Content()
+#    msg = sogs.session_pb2.DataMessage()
+#    msg.ParseFromString(tmp)
+    msg.body="test"
+    msg.profile.displayName="bot"
+#    data=str(msg).encode()
+    data = msg.SerializeToString()
+    data = b"\n"+chr(msg.ByteSize()).encode()+data
+
+    d, h = get_headers(data)
+#    data = utils.add_session_message_padding(data, msg.ByteSize())
+    d = utils.add_session_message_padding(d, 159)
+    d = utils.encode_base64(d)
+    s = h["X-SOGS-Hash"]
 
     msg = room.add_post(
+      user=user,
 #      data=utils.decode_base64(req.get('data')),
   #    whisper_to=req.get('whisper_to'),
   #    whisper_mods=bool(req.get('whisper_mods')),
 #      sig=utils.decode_base64(req.get('signature')),
       data=utils.decode_base64(d),
-      sig=utils.decode_base64(s),
+      sig=utils.decode_base64(s)
 #      data=data,
 #      sig=req["X-SOGS-Hash"],
-      user=user)
+    )
+    print(msg)
+
+    return
+
     from sogs import web
     with web.app.test_client() as client:
         pass
-#        client.post( url, data=data, content_type='application/json', headers=x_sogs_for(user, "POST", url, data))
+        client.post( url, data=data, content_type='application/json', headers=x_sogs_for(user, "POST", url, data))
 
 
 
@@ -129,9 +185,9 @@ def run():
     try:
         app.logger.info("OxenMQ mule started.")
 
+        my_test()
         while True:
             time.sleep(1)
-#            my_test()
 
     except Exception:
         app.logger.error("mule died via exception:\n{}".format(traceback.format_exc()))
@@ -219,6 +275,8 @@ def message_posted(m: oxenmq.Message):
 #      print(msg)
 #      print(utils.message_body(msg["data"]))
 #      print(utils.remove_session_message_padding(msg["data"]))
+        print(msg)
+        print("--")
         msg=parse_message(msg["data"])
         print(msg)
 #        mt_send(text=msg["body"], username="S "+msg["profile"]["displayName"])

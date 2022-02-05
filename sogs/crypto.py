@@ -38,6 +38,7 @@ with open(config.KEY_FILE, 'rb') as f:
 
 
 
+server_key = _privkey
 server_pubkey = _privkey.public_key
 
 
